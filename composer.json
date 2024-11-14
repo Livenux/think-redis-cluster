@@ -1,0 +1,33 @@
+{
+    "name": "livenux/think-redis-cluster",
+    "description": "thinkphp redis cluster cache support",
+    "type": "library",
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Livenux Chau",
+            "email": "livenux@gmail.com"
+        }
+    ],
+    "require": {
+	"php":  "^7.2",
+	"ext-redis": "*",
+	"topthink/framework": "^6.1"
+    },
+    "autoload": {
+         "psr-4": {
+           "livenux\\": "src"
+	 }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
+

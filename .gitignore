@@ -1,0 +1,10 @@
+.idea
+.vscode
+
+# project
+composer.lock
+phpunit/phpunit
+vendor/
+
+# phpunit
+.phpunit.*
