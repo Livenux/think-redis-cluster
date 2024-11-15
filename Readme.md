@@ -5,7 +5,7 @@ ThinkPHP Redis 集群模式支持
 
 ## 安装
 ``` shell
-composer require livenux/RedisCluster
+composer require livenux/think-redis-cluster
 ```
 
 ## 用法
