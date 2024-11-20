@@ -207,7 +207,6 @@ class RedisCluster extends Driver implements CacheInterface
 public function clear(): bool
 {
     // 获取带前缀的扫描模式
-    $prefix = $this->options['prefix'];
     $pattern = $this->getCacheKey('*');
     $keysToDelete = [];
 
@@ -220,8 +219,7 @@ public function clear(): bool
 
         do {
             // 使用 SCAN 方法逐步获取当前节点的所有匹配的键
-	    $scan_node = implode(":", $master);
-            $keys = $this->handler->scan($nextCursor, $scan_node, $pattern);
+            $keys = $this->handler->scan($nextCursor, $master, $pattern);
 	    
             if (is_array($keys)) {
                 $keysToDelete = array_merge($keysToDelete, $keys);

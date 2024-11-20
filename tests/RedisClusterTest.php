@@ -14,7 +14,7 @@ class RedisClusterTest extends TestCase
     {
         // 配置 RedisCluster 连接参数
         $options = [
-            'servers' => ['127.0.0.1:6379'], 
+            'servers' => ['192.168.117.3:6379'], 
             'timeout' => 1.5,
             'password' => '',
             'prefix' => 'test:',
