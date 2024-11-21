@@ -28,6 +28,7 @@ return [
             "ssl" => false, // 是否使用SSL
             "persistent" => true, // 是否使用持久化连接
             "ssl_context" => null, // SSL上下文选项
+            "compression" => "lz4", // 压缩选项, 可选: lzf, lz4, zstd, 默认不压缩
         ],
     ],
 
@@ -38,4 +39,3 @@ return [
 ## 问题
 1. 在 Redis 集群主从延迟的情况下，ThinkPHP 在设置了缓存之后会因为读不到缓存而报错，建议 `read_type` 采用 `failover` 或者 `master` 只在主节点读写，从节点作为故障转移节点， 或者在代码层面优化.
 2. ssl 支持，为了兼容 php redis 扩展 5.1  没有实现 ssl 连接功能
-3. ThinkPHP 8.1 未测试，目前只用在 6.1 环境

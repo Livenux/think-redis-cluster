@@ -28,6 +28,7 @@ class RedisCluster extends Driver implements CacheInterface
         "persistent" => false,
         "ssl_context" => null,
         "tag_prefix" => "tag:",
+        "compression" => null,
     ];
 
     /**
@@ -43,6 +44,23 @@ class RedisCluster extends Driver implements CacheInterface
             throw new \BadFunctionCallException("not support: redis");
         }
 
+        // 压缩选项转换
+        $compressionMap = [
+            null => \Redis::COMPRESSION_NONE,
+            "lzf" => defined("\Redis::COMPRESSION_LZF")
+                ? \Redis::COMPRESSION_LZF
+                : \Redis::COMPRESSION_NONE,
+            "lz4" => defined("\Redis::COMPRESSION_LZ4")
+                ? \Redis::COMPRESSION_LZ4
+                : \Redis::COMPRESSION_NONE,
+            "zstd" => defined("\Redis::COMPRESSION_ZSTD")
+                ? \Redis::COMPRESSION_ZSTD
+                : \Redis::COMPRESSION_NONE,
+        ];
+        $compressionOption =
+            $compressionMap[$this->options["compression"]] ??
+            \Redis::COMPRESSION_NONE;
+
         try {
             $this->handler = new \RedisCluster(
                 null,
@@ -50,11 +68,17 @@ class RedisCluster extends Driver implements CacheInterface
                 (float) $this->options["timeout"],
                 (float) $this->options["read_timeout"],
                 $this->options["persistent"],
-                $this->options["password"],
+                $this->options["password"]
+            );
+
+            // 设置压缩选项
+            $this->handler->setOption(
+                \Redis::OPT_COMPRESSION,
+                $compressionOption
             );
         } catch (\Exception $e) {
             throw new \BadFunctionCallException(
-                "RedisCluster connect failed: " . $e->getMessage(),
+                "RedisCluster connect failed: " . $e->getMessage()
             );
         }
 
@@ -73,25 +97,25 @@ class RedisCluster extends Driver implements CacheInterface
             case "slave":
                 $this->handler->setOption(
                     \RedisCluster::OPT_SLAVE_FAILOVER,
-                    \RedisCluster::FAILOVER_DISTRIBUTE_SLAVES,
+                    \RedisCluster::FAILOVER_DISTRIBUTE_SLAVES
                 );
                 break;
             case "master":
                 $this->handler->setOption(
                     \RedisCluster::OPT_SLAVE_FAILOVER,
-                    \RedisCluster::FAILOVER_NONE,
+                    \RedisCluster::FAILOVER_NONE
                 );
                 break;
             case "failover":
                 $this->handler->setOption(
                     \RedisCluster::OPT_SLAVE_FAILOVER,
-                    \RedisCluster::FAILOVER_ERROR,
+                    \RedisCluster::FAILOVER_ERROR
                 );
                 break;
             default:
                 $this->handler->setOption(
                     \RedisCluster::OPT_SLAVE_FAILOVER,
-                    \RedisCluster::FAILOVER_DISTRIBUTE,
+                    \RedisCluster::FAILOVER_DISTRIBUTE
                 );
                 break;
         }
@@ -201,51 +225,47 @@ class RedisCluster extends Driver implements CacheInterface
         return $this->handler->del($this->getCacheKey($key)) > 0;
     }
     /**
- * 清除所有缓存
- * @return bool
- */
-public function clear(): bool
-{
-    // 获取带前缀的扫描模式
-    $pattern = $this->getCacheKey('*');
-    $keysToDelete = [];
+     * 清除所有缓存
+     * @return bool
+     */
+    public function clear(): bool
+    {
+        // 获取带前缀的扫描模式
+        $pattern = $this->getCacheKey("*");
+        $keysToDelete = [];
 
-    // 获取所有集群节点
-    $masters = $this->handler->_masters(); // 获取所有主节点
+        // 获取所有集群节点
+        $masters = $this->handler->_masters(); // 获取所有主节点
 
-    // 遍历所有主节点
-    foreach ($masters as $master) {
-        $nextCursor = null;
+        // 遍历所有主节点
+        foreach ($masters as $master) {
+            $nextCursor = null;
 
-        do {
-            // 使用 SCAN 方法逐步获取当前节点的所有匹配的键
-            $keys = $this->handler->scan($nextCursor, $master, $pattern);
-	    
-            if (is_array($keys)) {
-                $keysToDelete = array_merge($keysToDelete, $keys);
+            do {
+                // 使用 SCAN 方法逐步获取当前节点的所有匹配的键
+                $keys = $this->handler->scan($nextCursor, $master, $pattern);
+
+                if (is_array($keys)) {
+                    $keysToDelete = array_merge($keysToDelete, $keys);
+                }
+            } while ($nextCursor > 0);
+        }
+
+        // 根据 same_slot_prefix 的值决定删除方式
+        if ($this->options["same_slot_prefix"]) {
+            // 一次性删除所有键
+            if (!empty($keysToDelete)) {
+                $this->handler->del($keysToDelete);
             }
-        } while ($nextCursor > 0);
-    }
-
-    // 根据 same_slot_prefix 的值决定删除方式
-    if ($this->options['same_slot_prefix']) {
-        // 一次性删除所有键
-        if (!empty($keysToDelete)) {
-            $this->handler->del($keysToDelete);
+        } else {
+            // 循环逐个删除
+            foreach ($keysToDelete as $key) {
+                $this->handler->del($key);
+            }
         }
-    } else {
-        // 循环逐个删除
-        foreach ($keysToDelete as $key) {
-            $this->handler->del($key);
-        }
+
+        return true;
     }
-
-    return true;
-}
-
-
-
-
 
     /**
      * 获取多个缓存项
@@ -257,7 +277,7 @@ public function clear(): bool
     {
         if (!is_array($keys) && !$keys instanceof \Traversable) {
             throw new InvalidArgumentException(
-                "Keys must be an array or Traversable.",
+                "Keys must be an array or Traversable."
             );
         }
 
@@ -295,7 +315,7 @@ public function clear(): bool
     {
         if (!is_array($values) && !$values instanceof \Traversable) {
             throw new InvalidArgumentException(
-                "Values must be an array or Traversable.",
+                "Values must be an array or Traversable."
             );
         }
 
@@ -304,7 +324,7 @@ public function clear(): bool
 
         foreach ($values as $key => $value) {
             $prefixedValues[$this->getCacheKey($key)] = $this->serialize(
-                $value,
+                $value
             );
         }
 
@@ -341,7 +361,7 @@ public function clear(): bool
     {
         if (!is_array($keys) && !$keys instanceof \Traversable) {
             throw new InvalidArgumentException(
-                "Keys must be an array or Traversable.",
+                "Keys must be an array or Traversable."
             );
         }
 
